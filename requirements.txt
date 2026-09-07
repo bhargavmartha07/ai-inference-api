@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+pydantic-settings
+redis
+transformers
+torch
+pytest
+pytest-asyncio
+httpx
+asgi-lifespan

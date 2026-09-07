@@ -1,0 +1,48 @@
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-inference-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: ai-inference-api
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      RATE_LIMIT_AMOUNT: ${RATE_LIMIT_AMOUNT:-5}
+      RATE_LIMIT_WINDOW_SECONDS: ${RATE_LIMIT_WINDOW_SECONDS:-60}
+      MODEL_NAME: ${MODEL_NAME:-distilbert-base-uncased-finetuned-sst-2-english}
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-300}
+      HF_HOME: /root/.cache/huggingface
+
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  hf-cache:
